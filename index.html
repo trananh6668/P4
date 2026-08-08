@@ -3,78 +3,40 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Game Cờ Caro</title>
+    <title>Game Cờ Caro 40x40 - Chuẩn Thi Đấu (Zoom to)</title>
     <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
     <style>
-        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f0f2f5; margin: 0; padding: 0; display: flex; flex-direction: column; height: 100vh; overflow: hidden; position: relative; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; text-align: center; background-color: #f0f2f5; margin: 0; padding: 10px; display: flex; flex-direction: column; height: 95vh; overflow: hidden; position: relative; }
+        h2 { color: #333; margin: 5px 0; font-size: 1.2rem; }
         
-        /* Top Panel - Nằm gọn trên cùng */
-        .top-bar {
-            background: white;
-            padding: 8px 15px;
-            box-shadow: 0 2px 6px rgba(0,0,0,0.15);
-            display: flex;
-            flex-wrap: wrap;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            z-index: 10;
-            width: 100%;
-            box-sizing: border-box;
-        }
-
-        .game-title {
-            font-size: 1.2rem;
-            font-weight: 800;
-            color: #d32f2f;
-            margin: 0;
-            letter-spacing: 1px;
-            text-transform: uppercase;
-        }
-
-        .panel-section {
-            display: flex;
-            flex-wrap: wrap;
-            align-items: center;
-            gap: 6px;
-        }
-
-        button { padding: 6px 14px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 0.85rem; transition: background 0.2s;}
+        /* Compact Controls */
+        .controls { background: white; padding: 8px 12px; border-radius: 8px; box-shadow: 0 1px 5px rgba(0,0,0,0.1); width: 100%; max-width: 800px; margin: 0 auto; box-sizing: border-box; position: relative; z-index: 10; }
+        .btn-group { display: flex; flex-wrap: wrap; justify-content: center; gap: 5px; margin-bottom: 5px; }
+        button { padding: 6px 12px; cursor: pointer; background: #007bff; color: white; border: none; border-radius: 4px; font-weight: bold; font-size: 0.85rem; }
         button:hover { background: #0056b3; }
+        input { padding: 5px; border: 1px solid #ccc; border-radius: 4px; width: 120px; font-family: monospace; font-size: 0.85rem; text-align: center; }
         
-        input { padding: 6px 8px; border: 1px solid #ccc; border-radius: 4px; width: 90px; font-family: monospace; font-size: 1rem; text-align: center; font-weight: bold; text-transform: uppercase;}
-        input:focus { outline: none; border-color: #007bff; }
-
-        /* Online Panel */
-        #online-panel { display: none; background: #e9ecef; padding: 4px 8px; border-radius: 6px; }
+        /* Online Panel - Compact */
+        #online-panel { display: none; background: #e9ecef; padding: 8px; border-radius: 6px; margin-top: 5px; }
+        .flex-row { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: 8px; margin: 4px 0; font-size: 0.9rem; }
         
-        /* ===== STYLE MỚI: MÀU NỀN PASTEL DỊU MẮT ===== */
-        #status { 
-            font-size: 0.95rem; 
-            font-weight: bold; 
-            padding: 6px 15px; 
-            border-radius: 6px; 
-            transition: all 0.3s ease-in-out;
-            display: inline-block;
-        }
-        .status-default { color: #004085; background-color: #cce5ff; border: 1px solid #b8daff; } /* Xanh dương pastel (Máy) */
-        .status-waiting { color: #856404; background-color: #fff3cd; border: 1px solid #ffeeba; }  /* Vàng pastel (Đợi) */
-        .status-connected { color: #155724; background-color: #d4edda; border: 1px solid #c3e6cb; } /* Xanh lá pastel (Đến lượt BẠN) */
-        .status-disconnected { color: #721c24; background-color: #f8d7da; border: 1px solid #f5c6cb; } /* Đỏ pastel (Mất kết nối) */
+        #status { font-size: 1rem; font-weight: bold; margin: 5px 0; color: #2e7d32; }
 
-        /* Board Wrapper */
+        /* Board Wrapper for Mobile Scrolling */
         #board-wrapper { 
             flex-grow: 1; 
             width: 100%; 
             max-width: 100%; 
             overflow: auto; 
+            margin-top: 10px; 
+            border-radius: 4px; 
             background: #999; 
             box-shadow: inset 0 0 10px rgba(0,0,0,0.3);
             -webkit-overflow-scrolling: touch; 
             position: relative;
         }
         
-        /* Board 40x40 */
+        /* Board 40x40 - Kích thước ô to hơn (35px) */
         #board { 
             display: grid; 
             grid-template-columns: repeat(40, 35px); 
@@ -84,18 +46,18 @@
             padding: 1px; 
             width: max-content; 
             margin: auto; 
-            position: relative;
+            position: relative; /* Cho đường kẻ */
         }
         
         /* Cells */
         .cell { 
-            width: 35px;
+            width: 35px; /* Tăng kích thước ô */
             height: 35px; 
             background: #fff8e7; 
             display: flex; 
             justify-content: center; 
             align-items: center; 
-            font-size: 26px; 
+            font-size: 26px; /* Tăng font size X/O */
             font-weight: bold; 
             cursor: pointer; 
             touch-action: manipulation;
@@ -105,7 +67,7 @@
         .cell.x { color: #d32f2f; }
         .cell.o { color: #1976d2; }
 
-        /* Winning Line */
+        /* Đường kẻ vàng (Winning Line) */
         .win-line {
             position: absolute;
             background-color: #ffeb3b; 
@@ -124,7 +86,7 @@
             top: 50%;
             left: 50%;
             transform: translate(-50%, -50%);
-            background: rgba(0, 0, 0, 0.95);
+            background: rgba(0, 0, 0, 0.95); /* Tăng độ đậm nền để chữ rõ hơn */
             color: white;
             padding: 25px 50px;
             border-radius: 12px;
@@ -141,7 +103,12 @@
             gap: 15px;
         }
         
-        .result-sub { font-size: 1rem; color: #ffeb3b; text-transform: none; margin-bottom: 10px; }
+        .result-sub {
+            font-size: 1rem;
+            color: #ffeb3b;
+            text-transform: none;
+            margin-bottom: 10px;
+        }
         
         .btn-close-banner {
             background-color: white;
@@ -154,50 +121,51 @@
             cursor: pointer;
             transition: background 0.2s;
         }
-        .btn-close-banner:hover { background-color: #f0f0f0; }
+        
+        .btn-close-banner:hover {
+            background-color: #f0f0f0;
+        }
 
         @keyframes popUp {
             0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
             100% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
         }
-
-        /* Responsive cho Mobile */
-        @media (max-width: 800px) {
-            .top-bar { justify-content: center; }
-            .game-title { display: none; } 
-            #status { width: 100%; text-align: center; }
-        }
     </style>
 </head>
 <body>
 
-    <header class="top-bar">
-        <div class="panel-section">
-            <h1 class="game-title">GAME CARO</h1>
+    <h2>Cờ Caro 40x40 - Chuẩn Thi Đấu</h2>
+    
+    <div class="controls">
+        <div class="btn-group">
             <button onclick="setMode('ai')">Chơi với Máy</button>
             <button onclick="setMode('online')">Chơi Online</button>
             <button onclick="resetGame()" style="background: #dc3545;">Chơi Lại</button>
         </div>
         
-        <div class="panel-section" id="online-panel">
-            <input type="text" id="my-id" readonly placeholder="Đang tạo...">
-            <button onclick="copyMyId()" style="background: #28a745;">Copy Mã</button>
-            <span style="color:#aaa;">|</span>
-            <input type="text" id="friend-id" placeholder="VD: A1B2C3" maxlength="6">
-            <button onclick="connectToFriend()">Vào Phòng</button>
+        <div id="online-panel">
+            <div class="flex-row">
+                <span>Mã của bạn:</span>
+                <input type="text" id="my-id" readonly placeholder="Đang tạo mã...">
+                <button onclick="copyMyId()" style="background: #28a745;">Copy</button>
+                <span style="color:#aaa;">|</span>
+                <span>Vào phòng:</span>
+                <input type="text" id="friend-id" placeholder="Mã bạn bè...">
+                <button onclick="connectToFriend()">Vào</button>
+            </div>
         </div>
         
-        <div class="panel-section">
-            <div id="status" class="status-default">Máy | Lượt của X (Đỏ)</div>
-        </div>
-    </header>
+        <div id="status">Chế độ: Chơi với Máy. Lượt của X</div>
+    </div>
 
+    <!-- Khung chứa để cuộn bàn cờ -->
     <div id="board-wrapper">
         <div id="board">
-            <!-- Đường kẻ thắng -->
+            <!-- Đường kẻ thắng sẽ được thêm vào đây -->
         </div>
     </div>
 
+    <!-- Banner Kết Quả -->
     <div id="result-banner">
         <span id="result-text">X THẮNG!</span>
         <div class="result-sub">Nhấn "Chơi Lại" để bắt đầu ván mới</div>
@@ -214,8 +182,6 @@
     
     let peer = null;
     let conn = null;
-    let connState = 'none'; // 'none', 'waiting', 'connected', 'disconnected'
-    let disconnectInterval = null; // Biến lưu vòng lặp kiểm tra kết nối
 
     function initBoard() {
         board = Array(SIZE).fill().map(() => Array(SIZE).fill(0));
@@ -237,21 +203,16 @@
         boardDiv.appendChild(fragment);
         
         currentTurn = 1;
+        gameActive = true;
+        closeBanner(); // Đóng banner khi chơi lại
         
-        if (mode === 'ai') {
-            gameActive = true;
-        } else if (mode === 'online' && connState === 'connected') {
-            gameActive = true;
-        } else {
-            gameActive = false;
-        }
-
-        closeBanner(); 
+        // Xoá đường kẻ cũ nếu có
         const oldLine = document.getElementById('win-line');
         if(oldLine) oldLine.remove();
 
         updateStatus();
         
+        // Tự động cuộn ra giữa
         setTimeout(() => {
             const wrapper = document.getElementById('board-wrapper');
             const boardEl = document.getElementById('board');
@@ -267,57 +228,25 @@
 
     function setMode(newMode) {
         mode = newMode;
-        document.getElementById('online-panel').style.display = mode === 'online' ? 'flex' : 'none';
+        document.getElementById('online-panel').style.display = mode === 'online' ? 'block' : 'none';
+        initBoard();
         
         if (mode === 'ai') {
-            connState = 'none';
             myPlayer = 1;
-            stopConnectionCheck();
-            initBoard();
+            updateStatus();
         } else {
-            if (!peer) {
-                connState = 'waiting';
-                initializePeer();
-            } else {
-                connState = (conn && conn.open) ? 'connected' : 'waiting';
-            }
-            initBoard(); 
+            document.getElementById('status').innerText = "Vui lòng kết nối để chơi Online.";
+            gameActive = false;
+            if (!peer) initializePeer();
         }
     }
 
-    /* ===== CẬP NHẬT TRẠNG THÁI (LƯỢT ĐÁNH, ĐỢI ĐỐI PHƯƠNG, MẤT KẾT NỐI) ===== */
     function updateStatus() {
-        const statusEl = document.getElementById('status');
-        statusEl.className = ''; 
-
-        if (mode === 'ai') {
-            statusEl.classList.add('status-default'); // Màu xanh pastel (Máy)
-            let text = "Máy | ";
-            text += currentTurn === 1 ? "Lượt của X (Đỏ)" : "Lượt của O (Xanh)";
-            statusEl.innerText = text;
-        } else if (mode === 'online') {
-            if (connState === 'waiting') {
-                statusEl.classList.add('status-waiting'); // Màu vàng pastel
-                statusEl.innerText = "Đang đợi đối thủ kết nối...";
-            } else if (connState === 'disconnected') {
-                statusEl.classList.add('status-disconnected'); // Màu đỏ pastel
-                statusEl.innerText = "Mất kết nối với đối phương!";
-            } else if (connState === 'connected') {
-                let myChar = myPlayer === 1 ? "X (Đỏ)" : "O (Xanh)";
-                let oppChar = myPlayer === 1 ? "O (Xanh)" : "X (Đỏ)";
-                
-                // NẾU LÀ LƯỢT CỦA MÌNH -> Báo XANH
-                if (currentTurn === myPlayer) {
-                    statusEl.classList.add('status-connected'); 
-                    statusEl.innerText = `Lượt của BẠN - ${myChar}`;
-                } 
-                // NẾU LÀ LƯỢT ĐỐI PHƯƠNG -> Báo VÀNG (Đang đợi)
-                else {
-                    statusEl.classList.add('status-waiting');
-                    statusEl.innerText = `Đang đợi đối phương - ${oppChar}...`;
-                }
-            }
-        }
+        if (!gameActive && mode === 'online') return;
+        let text = mode === 'ai' ? "AI | " : "Online | ";
+        text += currentTurn === 1 ? "Lượt của X (Đỏ)" : "Lượt của O (Xanh)";
+        if (mode === 'online') text += myPlayer === currentTurn ? " (Bạn)" : " (Đợi)";
+        document.getElementById('status').innerText = text;
     }
 
     function handleMove(r, c) {
@@ -351,7 +280,8 @@
     }
 
     function endGame(winner, winData) {
-        gameActive = false; 
+        gameActive = false; // Chặn đánh tiếp
+        let winnerText = winner === 1 ? 'X' : 'O';
         let bannerText = "";
 
         if (mode === 'online') {
@@ -372,9 +302,10 @@
             }
         }
 
+        document.getElementById('status').innerText = `Kết thúc trận đấu!`;
         const banner = document.getElementById('result-banner');
         document.getElementById('result-text').innerText = bannerText;
-        banner.style.display = 'flex'; 
+        banner.style.display = 'flex'; // Hiện banner dưới dạng flex để canh giữa nút
 
         if (winData) drawWinningLine(winData);
     }
@@ -383,27 +314,48 @@
         document.getElementById('result-banner').style.display = 'none';
     }
 
-    /* KIỂM TRA THẮNG THUA - CHUẨN THI ĐẤU */
+    /* KIỂM TRA THẮNG THUA - CHUẨN THI ĐẤU (Luật Caro chặn 2 đầu không thắng) */
     function checkWinStandard(r, c, player) {
-        const dirs = [ [1,0], [0,1], [1,1], [1,-1] ];
-        for (let d of dirs) {
-            let count = 1, blocks = 0;
-            let startR = r, startC = c, endR = r, endC = c;
+        const dirs = [ 
+            [1,0],  // Dọc
+            [0,1],  // Ngang
+            [1,1],  // Chéo chính
+            [1,-1]  // Chéo phụ
+        ];
 
+        for (let d of dirs) {
+            let count = 1;
+            let blocks = 0;
+            let startR = r, startC = c;
+            let endR = r, endC = c;
+
+            // Đếm lùi
             for (let step = 1; step <= 5; step++) {
                 let nr = r - d[0] * step, nc = c - d[1] * step;
                 if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) { blocks++; break; }
-                if (board[nr][nc] === player) { count++; startR = nr; startC = nc; }
-                else if (board[nr][nc] !== 0) { blocks++; break; } else break;
+                if (board[nr][nc] === player) {
+                    count++;
+                    startR = nr;
+                    startC = nc;
+                } else if (board[nr][nc] !== 0) { 
+                    blocks++; break; 
+                } else break;
             }
 
+            // Đếm tới
             for (let step = 1; step <= 5; step++) {
                 let nr = r + d[0] * step, nc = c + d[1] * step;
                 if (nr < 0 || nr >= SIZE || nc < 0 || nc >= SIZE) { blocks++; break; }
-                if (board[nr][nc] === player) { count++; endR = nr; endC = nc; }
-                else if (board[nr][nc] !== 0) { blocks++; break; } else break;
+                if (board[nr][nc] === player) {
+                    count++;
+                    endR = nr;
+                    endC = nc;
+                } else if (board[nr][nc] !== 0) { 
+                    blocks++; break; 
+                } else break;
             }
 
+            // Đủ 5 quân và không bị chặn 2 đầu thì thắng
             if (count >= 5 && blocks < 2) {
                 return { start: {r: startR, c: startC}, end: {r: endR, c: endC}, count: count };
             }
@@ -411,10 +363,12 @@
         return null;
     }
 
+    // Vẽ đường kẻ vàng
     function drawWinningLine(winData) {
         const boardEl = document.getElementById('board');
         const startCell = document.getElementById(`cell-${winData.start.r}-${winData.start.c}`);
         const endCell = document.getElementById(`cell-${winData.end.r}-${winData.end.c}`);
+
         if (!startCell || !endCell) return;
 
         const startRect = startCell.getBoundingClientRect();
@@ -439,7 +393,10 @@
         line.style.transform = `rotate(${angle}deg)`;
 
         boardEl.appendChild(line);
-        setTimeout(() => { line.style.width = `${length}px`; }, 50);
+
+        setTimeout(() => {
+            line.style.width = `${length}px`;
+        }, 50);
     }
 
     /* AI LOGIC */
@@ -510,96 +467,40 @@
         return score;
     }
 
-    function generateAlphaNumericId(length) {
-        const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
-        let result = '';
-        for (let i = 0; i < length; i++) {
-            result += chars.charAt(Math.floor(Math.random() * chars.length));
-        }
-        return result;
-    }
-
-    /* ===== WEBRTC PEERJS ===== */
+    /* WEBRTC PEERJS */
     function initializePeer() {
-        const randomId = generateAlphaNumericId(6);
+        const randomId = 'caro-' + Math.random().toString(36).substr(2, 4);
         peer = new Peer(randomId); 
 
-        peer.on('open', (id) => { 
-            document.getElementById('my-id').value = id; 
-        });
+        peer.on('open', (id) => { document.getElementById('my-id').value = id; });
 
         peer.on('connection', (connection) => {
             conn = connection;
-            connState = 'connected';
             setupConnectionLogic();
             myPlayer = 1; 
-            alert("Bạn bè đã vào phòng! Bạn là X (Đi trước).");
-            initBoard(); 
+            alert("Bạn bè đã vào! Bạn là X (Đi trước).");
+            initBoard();
         });
 
-        peer.on('error', (err) => { 
-            if (err.type === 'unavailable-id') {
-                initializePeer();
-            } else {
-                handleDisconnect();
-            }
-        });
-        
-        peer.on('disconnected', () => {
-            handleDisconnect();
-        });
+        peer.on('error', (err) => { alert("Lỗi: " + err.type); });
     }
 
     function connectToFriend() {
-        const friendId = document.getElementById('friend-id').value.trim().toUpperCase();
-        if (!friendId || friendId.length !== 6) return alert("Vui lòng nhập đúng MÃ PHÒNG gồm 6 KÝ TỰ!");
-        
-        connState = 'waiting';
-        updateStatus();
+        const friendId = document.getElementById('friend-id').value.trim();
+        if (!friendId) return alert("Vui lòng nhập mã phòng!");
         
         conn = peer.connect(friendId);
         
         conn.on('open', () => {
-            connState = 'connected';
             setupConnectionLogic();
             myPlayer = 2; 
             alert("Kết nối thành công! Bạn là O (Đi sau).");
             initBoard();
         });
-        
-        conn.on('close', handleDisconnect);
-        conn.on('error', handleDisconnect);
     }
 
-    /* HÀM XỬ LÝ KHI NGẮT KẾT NỐI */
-    function handleDisconnect() {
-        connState = 'disconnected';
-        gameActive = false; // Khóa bàn cờ lại
-        updateStatus();
-        stopConnectionCheck();
-    }
-
-    function stopConnectionCheck() {
-        if (disconnectInterval) {
-            clearInterval(disconnectInterval);
-            disconnectInterval = null;
-        }
-    }
-
-    /* THEO DÕI VÀ XỬ LÝ LOGIC TRONG TRẬN */
     function setupConnectionLogic() {
         gameActive = true;
-        
-        // LUÔN LUÔN KIỂM TRA TRẠNG THÁI MẠNG (Đề phòng trường hợp đối phương tắt thẳng tab)
-        stopConnectionCheck();
-        disconnectInterval = setInterval(() => {
-            if (mode === 'online' && connState === 'connected') {
-                if (!conn || !conn.open || (conn.peerConnection && ['disconnected', 'failed', 'closed'].includes(conn.peerConnection.iceConnectionState))) {
-                    handleDisconnect();
-                }
-            }
-        }, 1500);
-        
         conn.on('data', (data) => {
             if (data.type === 'move') {
                 placeStone(data.r, data.c, currentTurn);
@@ -614,17 +515,12 @@
                 initBoard();
             }
         });
-        
-        // Bắt lỗi thoát ra
-        conn.on('close', handleDisconnect);
-        conn.on('error', handleDisconnect);
     }
 
     function copyMyId() {
         const idInput = document.getElementById('my-id');
         idInput.select();
         document.execCommand('copy');
-        alert("Đã copy mã: " + idInput.value);
     }
 
     initBoard();
