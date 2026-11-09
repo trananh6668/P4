@@ -1,0 +1,32 @@
+{
+  "name": "co-vua",
+  "version": "1.0.0",
+  "description": "Offline chess vs Stockfish WASM (Web Worker + UCI) - React + TypeScript + Tailwind",
+  "scripts": {
+    "postinstall": "node scripts/setup-assets.mjs",
+    "assets": "node scripts/setup-assets.mjs",
+    "dev": "vite",
+    "build": "node scripts/setup-assets.mjs && tsc -b && vite build",
+    "preview": "vite preview",
+    "typecheck": "tsc -b"
+  },
+  "type": "module",
+  "dependencies": {
+    "chess.js": "^1.4.0",
+    "react": "^19.3.1",
+    "react-dom": "^19.3.1",
+    "stockfish": "^19.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/vite": "^4.3.5",
+    "@types/node": "^26.6.6",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
+    "@vitejs/plugin-react": "^6.2.1",
+    "chessground": "^9.2.1",
+    "tailwindcss": "^4.3.5",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.6"
+  },
+  "private": true
+}

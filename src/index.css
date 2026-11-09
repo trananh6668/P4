@@ -1,0 +1,59 @@
+@import 'tailwindcss';
+
+@theme {
+  /* Single Light-Mode Tournament Board Theme */
+  --color-board-light: #f0ece1;
+  --color-board-dark: #769656;
+  --color-highlight: #f7ec59;
+}
+
+html,
+body,
+#root {
+  min-height: 100%;
+  color-scheme: light;
+}
+
+body {
+  margin: 0;
+  font-family:
+    'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  background: linear-gradient(180deg, #f8fafc 0%, #eef2f6 100%);
+  color: #0f172a;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* King in check: red radial glow (tournament broadcast style) */
+.check-glow {
+  background: radial-gradient(
+    ellipse at center,
+    rgba(239, 68, 68, 0.95) 0%,
+    rgba(220, 38, 38, 0.85) 35%,
+    rgba(185, 28, 28, 0) 88%,
+    rgba(153, 27, 27, 0) 100%
+  );
+}
+
+/* Legal capture target: crisp ring around the square */
+.capture-ring {
+  background: radial-gradient(transparent 0%, transparent 77%, rgba(15, 23, 42, 0.28) 79%);
+}
+
+/* Crisp tournament drop shadow for chess pieces on the board */
+.chess-piece {
+  filter: drop-shadow(0 2px 2.5px rgba(15, 23, 42, 0.32));
+}
+
+@keyframes fade-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.animate-fade-in-up {
+  animation: fade-in-up 0.25s ease-out both;
+}
