@@ -5,17 +5,122 @@
  * check highlight and promotion picker.
  * ========================================================================== */
 
-import { memo, useCallback, useEffect, useMemo, useRef, useState, type PointerEvent, type ReactNode } from 'react';
+import {
+  memo,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type PointerEvent,
+  type ReactNode,
+} from 'react';
 import type { Move } from 'chess.js';
 import type { BoardPiece, MoveInput } from '../hooks/useChessGame';
 import type { Color, PieceSymbol, PromotionPiece, Square, UciMove } from '../types/chess';
 
 const FILES = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const;
 const PROMOTION_PIECES: PromotionPiece[] = ['q', 'n', 'r', 'b'];
+const ALL_COLORS: Color[] = ['w', 'b'];
+const ALL_PIECES: PieceSymbol[] = ['p', 'n', 'b', 'r', 'q', 'k'];
+
+/** Khóa cứng chế độ màu gốc để trình duyệt không tự động đảo màu khi sang Dark Mode */
+const FORCE_LIGHT_STYLE: CSSProperties = {
+  colorScheme: 'only light',
+  forcedColorAdjust: 'none',
+  filter: 'none',
+};
 
 export function pieceSrc(color: Color, type: PieceSymbol): string {
   return `${import.meta.env.BASE_URL}pieces/${color}${type.toUpperCase()}.svg`;
 }
+
+/* ------------------------------------------- Bộ đệm bảo vệ màu SVG quân cờ */
+
+const safeSvgCache = new Map<string, string>();
+const safeSvgPromises = new Map<string, Promise<string>>();
+
+function toSafeSvgDataUri(svgText: string): string {
+  const patched = svgText.replace(
+    /<svg\b[^>]*>/i,
+    (openTag) =>
+      `${openTag}<style>:root,svg,*{color-scheme:only light !important;forced-color-adjust:none !important;filter:none !important;}</style>`,
+  );
+  return `data:image/svg+xml;utf8,${encodeURIComponent(patched)}`;
+}
+
+function loadSafePieceSvg(color: Color, type: PieceSymbol): Promise<string> {
+  const key = `${color}${type}`;
+  const cached = safeSvgCache.get(key);
+  if (cached) return Promise.resolve(cached);
+
+  const existing = safeSvgPromises.get(key);
+  if (existing) return existing;
+
+  const rawUrl = pieceSrc(color, type);
+  const promise = fetch(rawUrl)
+    .then((res) => (res.ok ? res.text() : Promise.reject(new Error(`HTTP ${res.status}`))))
+    .then((svgText) => {
+      const dataUri = toSafeSvgDataUri(svgText);
+      safeSvgCache.set(key, dataUri);
+      return dataUri;
+    })
+    .catch(() => rawUrl);
+
+  safeSvgPromises.set(key, promise);
+  return promise;
+}
+
+function useSafePieceSrc(color: Color, type: PieceSymbol): string {
+  const key = `${color}${type}`;
+  const [src, setSrc] = useState<string>(() => safeSvgCache.get(key) ?? pieceSrc(color, type));
+
+  useEffect(() => {
+    let active = true;
+    const cached = safeSvgCache.get(key);
+    if (cached) {
+      setSrc(cached);
+      return;
+    }
+    loadSafePieceSvg(color, type).then((safeUrl) => {
+      if (active) setSrc(safeUrl);
+    });
+    return () => {
+      active = false;
+    };
+  }, [color, type, key]);
+
+  return src;
+}
+
+const ChessPieceImg = memo(function ChessPieceImg({
+  color,
+  type,
+  alt,
+  className,
+  style,
+}: {
+  color: Color;
+  type: PieceSymbol;
+  alt: string;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const src = useSafePieceSrc(color, type);
+  return (
+    <img
+      src={src}
+      alt={alt}
+      draggable={false}
+      data-darkreader-ignore=""
+      className={className}
+      style={{ ...FORCE_LIGHT_STYLE, ...style }}
+    />
+  );
+});
+
+/* ------------------------------------------------------------------ Types */
 
 interface ChessBoardProps {
   board: (BoardPiece | null)[][];
@@ -26,7 +131,7 @@ interface ChessBoardProps {
   /** Whether the human may move right now (their turn, engine idle, game running). */
   interactive: boolean;
   lastMove: { from: Square; to: Square } | null;
-  /** Whether to draw an arrow showing the piece movement of the last move. */
+  /** Whether to draw an arrow showing the piece movement (default: false). */
   showMoveArrow?: boolean;
   checkSquare: Square | null;
   legalMovesFrom: (square: Square) => Move[];
@@ -65,7 +170,7 @@ function ChessBoardImpl({
   playerColor,
   interactive,
   lastMove,
-  showMoveArrow = true,
+  showMoveArrow = false, // Mặc định OFF tính năng mũi tên chỉ hướng
   checkSquare,
   legalMovesFrom,
   onMove,
@@ -80,6 +185,15 @@ function ChessBoardImpl({
   const [userArrows, setUserArrows] = useState<UciMove[]>([]);
   const rightDragFromRef = useRef<Square | null>(null);
   const wasSelectedRef = useRef(false);
+
+  // Tải trước toàn bộ 12 mẫu quân cờ đã vá chống đảo màu
+  useEffect(() => {
+    for (const c of ALL_COLORS) {
+      for (const p of ALL_PIECES) {
+        void loadSafePieceSvg(c, p);
+      }
+    }
+  }, []);
 
   // Any position change (own move, engine move, undo, new game) clears UI selection state.
   useEffect(() => {
@@ -224,18 +338,19 @@ function ChessBoardImpl({
 
   /* ------------------------------------------------------------ render */
 
-  const hoverSquare = drag && boardRef.current
-    ? (() => {
-        const size = boardRef.current.clientWidth / 8;
-        const col = Math.floor(drag.x / size);
-        const row = Math.floor(drag.y / size);
-        return col >= 0 && col < 8 && row >= 0 && row < 8 ? fromDisplay(col, row, orientation) : null;
-      })()
-    : pointerHover;
+  const hoverSquare =
+    drag && boardRef.current
+      ? (() => {
+          const size = boardRef.current.clientWidth / 8;
+          const col = Math.floor(drag.x / size);
+          const row = Math.floor(drag.y / size);
+          return col >= 0 && col < 8 && row >= 0 && row < 8 ? fromDisplay(col, row, orientation) : null;
+        })()
+      : pointerHover;
 
-  // Live preview arrow when a piece is selected and the pointer hovers a legal destination square
+  // Chỉ hiển thị mũi tên xem trước & nước đi cuối khi showMoveArrow được bật
   const activePreviewArrow: UciMove | null =
-    selected && hoverSquare && hoverSquare !== selected && targets.has(hoverSquare)
+    showMoveArrow && selected && hoverSquare && hoverSquare !== selected && targets.has(hoverSquare)
       ? `${selected}${hoverSquare}`
       : null;
 
@@ -261,6 +376,7 @@ function ChessBoardImpl({
         <div
           key={sq}
           data-square={sq}
+          style={FORCE_LIGHT_STYLE}
           className={`relative ${dark ? 'bg-board-dark' : 'bg-board-light'}`}
         >
           {isLast && <div className="absolute inset-0 bg-highlight/60" />}
@@ -291,11 +407,11 @@ function ChessBoardImpl({
           )}
 
           {piece && (
-            <img
-              src={pieceSrc(piece.color, piece.type)}
+            <ChessPieceImg
+              color={piece.color}
+              type={piece.type}
               alt={`${piece.color === 'w' ? 'Trắng' : 'Đen'} ${piece.type.toUpperCase()}`}
-              draggable={false}
-              className={`chess-piece pointer-events-none absolute inset-0 h-full w-full select-none p-[4%] ${
+              className={`chess-piece pointer-events-none absolute inset-0 z-20 h-full w-full select-none p-[4%] ${
                 isDragging ? 'opacity-25' : ''
               } ${interactive && piece.color === playerColor ? 'cursor-grab' : ''}`}
             />
@@ -303,9 +419,9 @@ function ChessBoardImpl({
 
           {moveTargets &&
             (isCapture ? (
-              <div className="pointer-events-none absolute inset-0 capture-ring" />
+              <div className="pointer-events-none absolute inset-0 z-20 capture-ring" />
             ) : (
-              <div className="pointer-events-none absolute left-1/2 top-1/2 h-[28%] w-[28%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900/28" />
+              <div className="pointer-events-none absolute left-1/2 top-1/2 z-20 h-[28%] w-[28%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900/28" />
             ))}
         </div>,
       );
@@ -313,10 +429,15 @@ function ChessBoardImpl({
   }
 
   return (
-    <div className="rounded-xl border border-slate-300 bg-white p-1.5 shadow-lg shadow-slate-300/60">
+    <div
+      style={FORCE_LIGHT_STYLE}
+      data-darkreader-ignore=""
+      className="rounded-xl border border-slate-300 bg-white p-1.5 shadow-lg shadow-slate-300/60 dark:border-slate-700 dark:bg-slate-800 dark:shadow-slate-950/60"
+    >
       <div
         ref={boardRef}
-        className="relative aspect-square w-full touch-none select-none overflow-hidden rounded-lg ring-1 ring-slate-300"
+        style={FORCE_LIGHT_STYLE}
+        className="relative aspect-square w-full touch-none select-none overflow-hidden rounded-lg ring-1 ring-slate-300 dark:ring-slate-700"
         onPointerDown={onPointerDown}
         onPointerMove={onPointerMove}
         onPointerUp={onPointerUp}
@@ -326,7 +447,7 @@ function ChessBoardImpl({
       >
         <div className="grid h-full w-full grid-cols-8 grid-rows-8">{squares}</div>
 
-        {/* Layer of directional arrows (last move, engine hint, active move preview, user arrows) */}
+        {/* Layer of directional arrows (z-10 để nằm dưới quân cờ z-20, tránh che khuất quân) */}
         <BoardArrows
           orientation={orientation}
           lastMoveUci={lastMoveUci}
@@ -336,10 +457,10 @@ function ChessBoardImpl({
         />
 
         {drag && boardRef.current && (
-          <img
-            src={pieceSrc(drag.piece.color, drag.piece.type)}
+          <ChessPieceImg
+            color={drag.piece.color}
+            type={drag.piece.type}
             alt=""
-            draggable={false}
             className="chess-piece pointer-events-none absolute left-0 top-0 z-30 h-[12.5%] w-[12.5%] cursor-grabbing p-[0.5%]"
             style={{
               transform: `translate(${drag.x - boardRef.current.clientWidth / 16}px, ${drag.y - boardRef.current.clientWidth / 16}px) scale(1.12)`,
@@ -372,8 +493,6 @@ interface ArrowItem {
   uci: UciMove;
   color: string;
   id: string;
-  dashed?: boolean;
-  showOriginDot?: boolean;
 }
 
 function BoardArrows({
@@ -394,34 +513,30 @@ function BoardArrows({
   if (lastMoveUci && lastMoveUci.length >= 4) {
     items.push({
       uci: lastMoveUci,
-      color: 'rgba(217, 119, 6, 0.85)', // amber-600: piece that just moved
+      color: 'rgba(217, 119, 6, 0.55)', // amber-600 dịu nhẹ
       id: 'arrow-last',
-      showOriginDot: true,
     });
   }
   if (hintUci && hintUci.length >= 4) {
     items.push({
       uci: hintUci,
-      color: 'rgba(22, 163, 74, 0.88)', // green-600: Stockfish best move hint
+      color: 'rgba(22, 163, 74, 0.65)', // green-600
       id: 'arrow-hint',
-      showOriginDot: true,
     });
   }
   if (previewUci && previewUci.length >= 4) {
     items.push({
       uci: previewUci,
-      color: 'rgba(37, 99, 235, 0.85)', // blue-600: active move preview
+      color: 'rgba(37, 99, 235, 0.55)', // blue-600
       id: 'arrow-preview',
-      showOriginDot: true,
     });
   }
   userArrows.forEach((u, idx) => {
     if (u.length >= 4) {
       items.push({
         uci: u,
-        color: 'rgba(220, 38, 38, 0.82)', // red-600: right-click tactical arrow
+        color: 'rgba(220, 38, 38, 0.6)', // red-600
         id: `arrow-user-${idx}`,
-        showOriginDot: true,
       });
     }
   });
@@ -429,7 +544,12 @@ function BoardArrows({
   if (items.length === 0) return null;
 
   return (
-    <svg viewBox="0 0 8 8" className="pointer-events-none absolute inset-0 z-20 h-full w-full">
+    <svg
+      viewBox="0 0 8 8"
+      style={FORCE_LIGHT_STYLE}
+      data-darkreader-ignore=""
+      className="pointer-events-none absolute inset-0 z-10 h-full w-full"
+    >
       {items.map((item) => {
         const a = toDisplay(item.uci.slice(0, 2) as Square, orientation);
         const b = toDisplay(item.uci.slice(2, 4) as Square, orientation);
@@ -447,16 +567,17 @@ function BoardArrows({
         const px = -uy;
         const py = ux;
 
-        // Start slightly away from center of origin square; stop inside target square
-        const startOffset = 0.16;
-        const headLength = 0.42;
-        const headHalfWidth = 0.24;
-        const shaftHalfWidth = 0.085;
+        // Thiết kế siêu mảnh, rút ngắn 2 đầu để không chạm vào phần thân quân cờ
+        const startOffset = 0.22;
+        const tipOffset = 0.22;
+        const headLength = 0.18;
+        const headHalfWidth = 0.095;
+        const shaftHalfWidth = 0.028;
 
         const sx = x1 + ux * startOffset;
         const sy = y1 + uy * startOffset;
-        const tipX = x2 - ux * 0.08;
-        const tipY = y2 - uy * 0.08;
+        const tipX = x2 - ux * tipOffset;
+        const tipY = y2 - uy * tipOffset;
         const neckX = tipX - ux * headLength;
         const neckY = tipY - uy * headLength;
 
@@ -471,25 +592,14 @@ function BoardArrows({
         ].join(' ');
 
         return (
-          <g key={item.id}>
-            {item.showOriginDot && (
-              <circle
-                cx={x1}
-                cy={y1}
-                r={0.14}
-                fill={item.color}
-                stroke="rgba(255,255,255,0.8)"
-                strokeWidth={0.03}
-              />
-            )}
-            <polygon
-              points={points}
-              fill={item.color}
-              stroke="rgba(255,255,255,0.85)"
-              strokeWidth={0.03}
-              strokeLinejoin="round"
-            />
-          </g>
+          <polygon
+            key={item.id}
+            points={points}
+            fill={item.color}
+            stroke="rgba(255,255,255,0.6)"
+            strokeWidth={0.012}
+            strokeLinejoin="round"
+          />
         );
       })}
     </svg>
@@ -516,6 +626,7 @@ function PromotionPicker({
 
   return (
     <div
+      style={FORCE_LIGHT_STYLE}
       className="absolute inset-0 z-40 bg-slate-900/35 backdrop-blur-[1px]"
       onPointerDown={(e) => {
         e.stopPropagation();
@@ -525,6 +636,7 @@ function PromotionPicker({
       <div
         className="absolute flex w-[12.5%] flex-col overflow-hidden rounded-lg bg-white shadow-2xl ring-2 ring-slate-400"
         style={{
+          ...FORCE_LIGHT_STYLE,
           left: `${col * 12.5}%`,
           ...(fromTop ? { top: 0 } : { bottom: 0 }),
           flexDirection: fromTop ? 'column' : 'column-reverse',
@@ -541,7 +653,7 @@ function PromotionPicker({
               onPick(p);
             }}
           >
-            <img src={pieceSrc(color, p)} alt={p} draggable={false} className="chess-piece h-full w-full" />
+            <ChessPieceImg color={color} type={p} alt={p} className="chess-piece h-full w-full" />
           </button>
         ))}
       </div>
