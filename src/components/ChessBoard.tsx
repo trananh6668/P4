@@ -377,7 +377,7 @@ function ChessBoardImpl({
           key={sq}
           data-square={sq}
           style={FORCE_LIGHT_STYLE}
-          className={`relative ${dark ? 'bg-board-dark' : 'bg-board-light'}`}
+          className={`relative ${dark ? 'bg-board-dark' : 'bg-[#c8ccd0]'}`}
         >
           {isLast && <div className="absolute inset-0 bg-highlight/60" />}
           {isSelected && <div className="absolute inset-0 bg-amber-300/75" />}
@@ -390,7 +390,7 @@ function ChessBoardImpl({
           {col === 0 && (
             <span
               className={`pointer-events-none absolute left-[4%] top-[3%] text-[clamp(9px,1.5vw,13px)] font-bold leading-none ${
-                dark ? 'text-board-light' : 'text-board-dark'
+                dark ? 'text-[#c8ccd0]' : 'text-board-dark'
               }`}
             >
               {rank}
@@ -399,7 +399,7 @@ function ChessBoardImpl({
           {row === 7 && (
             <span
               className={`pointer-events-none absolute bottom-[2%] right-[4%] text-[clamp(9px,1.5vw,13px)] font-bold leading-none ${
-                dark ? 'text-board-light' : 'text-board-dark'
+                dark ? 'text-[#c8ccd0]' : 'text-board-dark'
               }`}
             >
               {FILES[file]}
@@ -569,9 +569,9 @@ function BoardArrows({
 
         // Thiết kế siêu mảnh, rút ngắn 2 đầu để không chạm vào phần thân quân cờ
         const startOffset = 0.22;
-        const tipOffset = 0.22;
-        const headLength = 0.18;
-        const headHalfWidth = 0.095;
+        const tipOffset = 0.4;
+        const headLength = 0.16;
+        const headHalfWidth = 0.085;
         const shaftHalfWidth = 0.028;
 
         const sx = x1 + ux * startOffset;
